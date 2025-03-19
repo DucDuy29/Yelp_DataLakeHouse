@@ -1,0 +1,76 @@
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    env_file:
+      - ./env/minio.env
+    volumes:
+      - ./storage:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    networks:
+      - tlcn-network
+
+  postgresdb:
+    image: postgres:15
+    container_name: postgresdb
+    hostname: metastore_db
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive
+      POSTGRES_DB: metastore
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    networks:
+      - tlcn-network
+
+  # Hive Metastore
+  hive-metastore:
+    container_name: hive-metastore
+    build: ./hive
+    ports:
+      - "9083:9083"
+    networks:
+      - tlcn-network
+
+  # Presto Coordinator
+  presto:
+    container_name: presto
+    build: ./presto/config
+    ports:
+      - "8100:8080"
+    networks:
+      - tlcn-network
+
+  # Spark Service
+  # spark:
+  #   container_name: spark-master
+  #   build: ./spark
+  #   ports:
+  #     - "7077:7077" # Spark master port
+  #     - "8080:8080" # Spark master UI
+  #     - "8081:8081" # Spark UI
+  #   networks:
+  #     - tlcn-network
+    
+
+  # Spark worker
+  # spark-worker:
+  #   container_name: spark-worker
+  #   env_file:
+  #     - ./env/spark.env
+  #   build: .
+  #   networks:
+  #     - iceberg-network
+  #   volumes:
+  #     - ./spark:/spark
+      
+networks:
+  tlcn-network:
+    driver: bridge
+
+
+volumes:
+  storage:
